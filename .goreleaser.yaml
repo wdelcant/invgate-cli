@@ -34,10 +34,10 @@ archives:
 
 brews:
   - repository:
-      owner: invgate
+      owner: wdelcant
       name: homebrew-tap
     homepage: https://github.com/wdelcant/invgate-cli
-    description: "Runtime OpenAPI/Swagger CLI"
+    description: "Runtime OpenAPI/Swagger CLI — works with any Swagger/OpenAPI spec"
     license: MIT
     install: |
       bin.install "invgate-cli"
@@ -46,25 +46,11 @@ brews:
 
 release:
   github:
-    owner: invgate
+    owner: wdelcant
     name: invgate-cli
-
-signs:
-  - cmd: cosign
-    artifacts: checksum
-    signature: ${artifact}.sig
-    args:
-      - sign-blob
-      - --yes
-      - --output-signature
-      - ${artifact}.sig
-      - ${artifact}
 
 checksum:
   name_template: 'checksums.txt'
-
-snapshot:
-  version_template: "{{ incpatch .Version }}-next"
 
 changelog:
   use: git
