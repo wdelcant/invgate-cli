@@ -1,5 +1,5 @@
 # Binaries
-invgate-cli
+/invgate-cli
 *.exe
 *.exe~
 *.dll
