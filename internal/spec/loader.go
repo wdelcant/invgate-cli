@@ -275,27 +275,26 @@ func sanitizeSwagger2Examples(raw map[string]any) {
 	stripArrayExamples(raw)
 }
 
-// stripExtraFields removes non-standard extension fields from operations
-// that openapi2.T does not recognize (e.g. "isRequest" injected by drf-yasg).
+// stripExtraFields removes non-standard extension fields from the spec
+// recursively. drf-yasg injects "isRequest" inside schema objects which
+// openapi2.T rejects as extra sibling fields.
 func stripExtraFields(raw map[string]any) {
-	paths, ok := raw["paths"].(map[string]any)
-	if !ok {
-		return
-	}
-	extraFields := []string{"isRequest"}
-	for _, pathItem := range paths {
-		pi, ok := pathItem.(map[string]any)
-		if !ok {
-			continue
+	extraFields := map[string]bool{"isRequest": true}
+	stripFieldsRecursive(raw, extraFields)
+}
+
+func stripFieldsRecursive(v any, fields map[string]bool) {
+	switch val := v.(type) {
+	case map[string]any:
+	for f := range fields {
+			delete(val, f)
 		}
-		for _, op := range pi {
-			opMap, ok := op.(map[string]any)
-			if !ok {
-				continue
-			}
-			for _, f := range extraFields {
-				delete(opMap, f)
-			}
+		for _, sub := range val {
+			stripFieldsRecursive(sub, fields)
+		}
+	case []any:
+		for _, item := range val {
+			stripFieldsRecursive(item, fields)
 		}
 	}
 }
