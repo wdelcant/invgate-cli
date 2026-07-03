@@ -22,23 +22,18 @@ jobs:
           cache: true
 
       - name: Download dependencies
-        working-directory: invgate-cli
         run: go mod download
 
       - name: Build
-        working-directory: invgate-cli
         run: go build ./...
 
       - name: Vet
-        working-directory: invgate-cli
         run: go vet ./...
 
       - name: Test with coverage
-        working-directory: invgate-cli
         run: go test -race -cover -timeout 120s ./...
 
       - name: Verify coverage threshold
-        working-directory: invgate-cli
         shell: bash
         run: |
           set -euo pipefail
