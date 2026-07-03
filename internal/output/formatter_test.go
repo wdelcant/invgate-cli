@@ -323,6 +323,8 @@ func compareGolden(t *testing.T, name string, got []byte) {
 		if err := os.MkdirAll("testdata", 0o755); err != nil {
 			t.Fatalf("MkdirAll: %v", err)
 		}
+		// Normalize line endings when writing golden files.
+		got = bytes.ReplaceAll(got, []byte("\r\n"), []byte("\n"))
 		if err := os.WriteFile(path, got, 0o644); err != nil {
 			t.Fatalf("WriteFile: %v", err)
 		}
@@ -338,6 +340,12 @@ func compareGolden(t *testing.T, name string, got []byte) {
 			return
 		}
 		t.Fatalf("could not read golden file %s: %v", path, err)
+	}
+	if !bytes.Equal(got, want) {
+		// Normalize line endings before comparison — Go's csv.Writer may
+		// produce \r\n on Windows while golden files are always \n.
+		got = bytes.ReplaceAll(got, []byte("\r\n"), []byte("\n"))
+		want = bytes.ReplaceAll(want, []byte("\r\n"), []byte("\n"))
 	}
 	if !bytes.Equal(got, want) {
 		t.Errorf("output mismatch for %s\n--- got ---\n%s\n--- want ---\n%s", name, got, want)
