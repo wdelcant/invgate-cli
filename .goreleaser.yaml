@@ -36,6 +36,7 @@ brews:
   - repository:
       owner: wdelcant
       name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     homepage: https://github.com/wdelcant/invgate-cli
     description: "Runtime OpenAPI/Swagger CLI — works with any Swagger/OpenAPI spec"
     license: MIT
