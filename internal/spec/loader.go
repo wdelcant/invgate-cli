@@ -122,9 +122,11 @@ func DetectFormat(path string) string {
 // sanitizeSwagger2 cleans up non-conforming parts of real-world Swagger 2.0
 // specs so that kin-openapi's openapi2.T can unmarshal them:
 //   - "examples" arrays on responses become maps (or are dropped),
+//   - "isRequest" extension fields on operations are stripped,
 //   - security scheme names with spaces are renamed and references updated.
 func sanitizeSwagger2(raw map[string]any) {
 	stripArrayExamples(raw)
+	stripExtraFields(raw)
 	renameSecuritySchemes(raw)
 }
 
@@ -271,4 +273,29 @@ func remapSecurityList(sec []any, nameMap map[string]string) []any {
 
 func sanitizeSwagger2Examples(raw map[string]any) {
 	stripArrayExamples(raw)
+}
+
+// stripExtraFields removes non-standard extension fields from operations
+// that openapi2.T does not recognize (e.g. "isRequest" injected by drf-yasg).
+func stripExtraFields(raw map[string]any) {
+	paths, ok := raw["paths"].(map[string]any)
+	if !ok {
+		return
+	}
+	extraFields := []string{"isRequest"}
+	for _, pathItem := range paths {
+		pi, ok := pathItem.(map[string]any)
+		if !ok {
+			continue
+		}
+		for _, op := range pi {
+			opMap, ok := op.(map[string]any)
+			if !ok {
+				continue
+			}
+			for _, f := range extraFields {
+				delete(opMap, f)
+			}
+		}
+	}
 }

@@ -211,6 +211,15 @@ func (c *CLI) initAuthAndExecutor() {
 	tokenURL := ""
 	if c.SpecDoc != nil {
 		tokenURL = extractTokenURL(c.SpecDoc)
+		// If the token URL from the spec is relative (e.g. /oauth2/token/),
+		// resolve it against the base URL.
+		if tokenURL != "" && !strings.HasPrefix(tokenURL, "http") {
+			base := c.BaseURL
+			if base == "" {
+				base = deriveBaseURL(c.SpecDoc, c.Config)
+			}
+			tokenURL = strings.TrimRight(base, "/") + tokenURL
+		}
 	}
 
 	httpClient := c.HTTPClient
