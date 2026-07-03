@@ -1,0 +1,130 @@
+openapi: 3.0.0
+info:
+  title: Test API
+  version: 1.0.0
+servers:
+  - url: https://api.example.com
+components:
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.example.com/oauth/token
+          scopes:
+            write: write access
+            read: read access
+paths:
+  /assets/:
+    get:
+      tags: [Assets]
+      operationId: assets_list
+      summary: List assets
+      description: Retrieve a paginated list of assets.
+      parameters:
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: is_active
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: ids
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: integer
+        - name: required_field
+          in: query
+          required: true
+          description: A required query parameter
+          schema:
+            type: string
+      responses:
+        "200":
+          description: A list of assets
+    post:
+      tags: [Assets]
+      operationId: assets_create
+      summary: Create an asset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "201":
+          description: Asset created
+  /assets/{id}/:
+    get:
+      tags: [Assets]
+      operationId: assets_read
+      summary: Get a single asset
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: An asset
+    put:
+      tags: [Assets]
+      operationId: assets_update
+      summary: Update an asset
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Updated
+    delete:
+      tags: [Assets]
+      operationId: assets_delete
+      summary: Delete an asset
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+  /vendors/{vendor_id}/contacts/:
+    get:
+      tags: [Vendors]
+      operationId: vendor_contacts_list
+      summary: List vendor contacts
+      parameters:
+        - name: vendor_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Contacts
+  /ping/:
+    get:
+      summary: Health check
+      operationId: ping_read
+      responses:
+        "200":
+          description: OK

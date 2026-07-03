@@ -1,0 +1,10 @@
+{
+  [34m"active"[0m: [35mtrue[0m,
+  [34m"id"[0m: [33m1[0m,
+  [34m"missing"[0m: [31mnull[0m,
+  [34m"name"[0m: [32m"MacBook"[0m,
+  [34m"tags"[0m: [
+    [32m"a"[0m,
+    [32m"b"[0m
+  ]
+}

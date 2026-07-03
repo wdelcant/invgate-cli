@@ -1,0 +1,78 @@
+version: 2
+
+builds:
+  - main: ./cmd/invgate-cli
+    binary: invgate-cli
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/wdelcant/invgate-cli/internal/version.Version={{.Version}}
+      - -X github.com/wdelcant/invgate-cli/internal/version.Commit={{.Commit}}
+      - -X github.com/wdelcant/invgate-cli/internal/version.Date={{.Date}}
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_
+      {{- if eq .Os "darwin" }}macOS
+      {{- else if eq .Os "linux" }}Linux
+      {{- else if eq .Os "windows" }}Windows
+      {{- end }}_{{ .Arch }}
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+
+brews:
+  - repository:
+      owner: invgate
+      name: homebrew-tap
+    homepage: https://github.com/wdelcant/invgate-cli
+    description: "Runtime OpenAPI/Swagger CLI"
+    license: MIT
+    install: |
+      bin.install "invgate-cli"
+    test: |
+      system "#{bin}/invgate-cli", "--version"
+
+release:
+  github:
+    owner: invgate
+    name: invgate-cli
+
+signs:
+  - cmd: cosign
+    artifacts: checksum
+    signature: ${artifact}.sig
+    args:
+      - sign-blob
+      - --yes
+      - --output-signature
+      - ${artifact}.sig
+      - ${artifact}
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  use: git
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - Merge pull request
+      - Merge branch

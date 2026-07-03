@@ -1,0 +1,47 @@
+name: test
+
+on:
+  push:
+    branches: [main, "feature/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache: true
+
+      - name: Download dependencies
+        working-directory: invgate-cli
+        run: go mod download
+
+      - name: Build
+        working-directory: invgate-cli
+        run: go build ./...
+
+      - name: Vet
+        working-directory: invgate-cli
+        run: go vet ./...
+
+      - name: Test with coverage
+        working-directory: invgate-cli
+        run: go test -race -cover -timeout 120s ./...
+
+      - name: Verify coverage threshold
+        working-directory: invgate-cli
+        shell: bash
+        run: |
+          set -euo pipefail
+          COVER=$(go test -race -timeout 120s -coverpkg=./internal/... -coverprofile=coverage.out ./internal/... ./tests/ 2>/dev/null | grep -oE 'coverage: [0-9]+\.[0-9]+%' | head -1 | grep -oE '[0-9]+\.[0-9]+')
+          echo "Aggregate coverage: ${COVER}%"
+          awk 'END { if (covered>0) printf "Total: %.1f%%\n", 100*covered/total }' coverage.out
