@@ -98,6 +98,9 @@ func RunSetup(opts SetupOptions) error {
 		}
 		opts.Flags.ClientID = clientID
 		opts.Flags.ClientSecret = clientSecret
+
+		// Derive token URL from instance URL.
+		opts.Flags.TokenURL = instanceURL + "/oauth2/token/"
 		cfg.Output, err = promptString(opts.Out, scanner, "Default output format (json, yaml, table, csv)", cfg.Output)
 		if err != nil {
 			return err
