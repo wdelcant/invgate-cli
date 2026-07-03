@@ -37,8 +37,8 @@ type SetupOptions struct {
 	HTTPClient  *http.Client
 }
 
-// DefaultSpecURL is the default Swagger spec URL used during interactive setup.
-const DefaultSpecURL = "https://falabellacorp.is.cloud.invgate.net/public-api/swagger/v2/?format=openapi"
+// DefaultSpecURL is the default path appended to the instance URL to download the spec.
+const specPathSuffix = "/public-api/swagger/v2/?format=openapi"
 
 // RunSetup guides the user through configuring invgate-cli.
 // In interactive mode it downloads the spec, then prompts for base URL,
@@ -65,10 +65,15 @@ func RunSetup(opts SetupOptions) error {
 		scanner := bufio.NewScanner(opts.In)
 		scanner.Split(bufio.ScanLines)
 
-		// Step 0: Download the spec automatically.
-		if specURL == "" {
-			specURL = DefaultSpecURL
+		// Step 1: Ask for InvGate instance URL, then derive everything from it.
+		instanceURL, err := promptURL(opts.Out, scanner, "InvGate instance URL", opts.Flags.BaseURL)
+		if err != nil {
+			return err
 		}
+		instanceURL = strings.TrimRight(instanceURL, "/")
+
+		// Build spec URL from instance URL and download spec.
+		specURL := fmt.Sprintf("%s%s", instanceURL, specPathSuffix)
 		fmt.Fprintf(opts.Out, "Downloading API spec from %s ...\n", specURL)
 		specPath, err := downloadSpec(specURL)
 		if err != nil {
@@ -79,10 +84,10 @@ func RunSetup(opts SetupOptions) error {
 			fmt.Fprintf(opts.Out, "✓ Spec downloaded to %s\n\n", specPath)
 		}
 
-		cfg.BaseURL, err = promptURL(opts.Out, scanner, "Base URL", opts.Flags.BaseURL)
-		if err != nil {
-			return err
-		}
+		// Derive base URL from instance URL.
+		cfg.BaseURL = instanceURL + "/public-api/v2"
+
+		// Step 2: Credentials.
 		clientID, err := promptString(opts.Out, scanner, "Client ID", opts.Flags.ClientID)
 		if err != nil {
 			return err

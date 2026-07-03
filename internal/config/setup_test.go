@@ -253,8 +253,8 @@ func TestRunSetup_Interactive(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if cfg.BaseURL != server.URL {
-		t.Errorf("BaseURL = %q, want %q", cfg.BaseURL, server.URL)
+	if cfg.BaseURL != server.URL+"/public-api/v2" {
+		t.Errorf("BaseURL = %q, want %q", cfg.BaseURL, server.URL+"/public-api/v2")
 	}
 	if cfg.Output != "table" {
 		t.Errorf("Output = %q, want table", cfg.Output)
