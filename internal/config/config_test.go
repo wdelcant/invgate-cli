@@ -330,13 +330,14 @@ func TestSaveToPath_UnwritablePath(t *testing.T) {
 
 // --- Home-directory resolution error paths ---
 
-// withNoHome unsets both XDG_CONFIG_HOME and HOME so os.UserHomeDir
-// returns an error, exercising the error branches of ConfigDir and
-// every function that depends on it.
+// withNoHome unsets both XDG_CONFIG_HOME and HOME (and USERPROFILE on
+// Windows) so os.UserHomeDir returns an error, exercising the error
+// branches of ConfigDir and every function that depends on it.
 func withNoHome(t *testing.T) {
 	t.Helper()
 	t.Setenv("XDG_CONFIG_HOME", "")
 	t.Setenv("HOME", "")
+	t.Setenv("USERPROFILE", "") // Windows
 }
 
 func TestConfigDir_HomeError(t *testing.T) {
