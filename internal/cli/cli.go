@@ -212,13 +212,13 @@ func (c *CLI) initAuthAndExecutor() {
 	if c.SpecDoc != nil {
 		tokenURL = extractTokenURL(c.SpecDoc)
 		// If the token URL from the spec is relative (e.g. /oauth2/token/),
-		// resolve it against the base URL.
+		// resolve it against the server's host, not the API base path.
 		if tokenURL != "" && !strings.HasPrefix(tokenURL, "http") {
 			base := c.BaseURL
 			if base == "" {
 				base = deriveBaseURL(c.SpecDoc, c.Config)
 			}
-			tokenURL = strings.TrimRight(base, "/") + tokenURL
+			tokenURL = resolveRelativeURL(base, tokenURL)
 		}
 	}
 
@@ -569,8 +569,16 @@ func extractTokenURL(doc *openapi3.T) string {
 	return ""
 }
 
-// deriveBaseURL reconstructs a base URL from a converted Swagger 2.0
-// spec's server entries, falling back to the config base URL.
+// resolveRelativeURL resolves a relative path against the scheme and host
+// of the base URL. For example, base="https://example.com/api/v2" and
+// path="/oauth2/token/" yields "https://example.com/oauth2/token/".
+func resolveRelativeURL(baseURL, relPath string) string {
+	u, err := url.Parse(baseURL)
+	if err != nil || u.Scheme == "" {
+		return baseURL + relPath
+	}
+	return fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, relPath)
+}
 func deriveBaseURL(doc *openapi3.T, cfg *config.Config) string {
 	if doc != nil && len(doc.Servers) > 0 && doc.Servers[0].URL != "" {
 		return strings.TrimRight(doc.Servers[0].URL, "/")
