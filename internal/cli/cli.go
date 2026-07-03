@@ -415,7 +415,7 @@ func (c *CLI) buildSetupCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "setup",
 		Short: "Configure invgate-cli (base URL, credentials, output format)",
-		Long:  "Run interactively or pass --base-url/--client-id/--client-secret for non-interactive setup.",
+		Long:  "Downloads the API spec and prompts for base URL, client credentials, and output format. Use --base-url/--client-id/--client-secret for non-interactive setup.",
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			interactive, _ := cmd.Flags().GetBool("interactive")
@@ -424,6 +424,7 @@ func (c *CLI) buildSetupCmd() *cobra.Command {
 			clientSecret, _ := cmd.Flags().GetString("client-secret")
 			outFmt, _ := cmd.Flags().GetString("output")
 			tokenURL, _ := cmd.Flags().GetString("token-url")
+			specURL, _ := cmd.Flags().GetString("spec-url")
 
 			// If any of the required flags are provided, treat as non-interactive.
 			if baseURL != "" || clientID != "" || clientSecret != "" {
@@ -444,6 +445,7 @@ func (c *CLI) buildSetupCmd() *cobra.Command {
 					ClientSecret: clientSecret,
 					Output:       outFmt,
 					TokenURL:     tokenURL,
+					SpecURL:      specURL,
 				},
 				Keyring: kr,
 			}
@@ -458,6 +460,7 @@ func (c *CLI) buildSetupCmd() *cobra.Command {
 	cmd.Flags().String("client-id", "", "OAuth2 client ID")
 	cmd.Flags().String("client-secret", "", "OAuth2 client secret")
 	cmd.Flags().String("token-url", "", "OAuth2 token URL override")
+	cmd.Flags().String("spec-url", "", "Swagger/OpenAPI spec URL to download (default: InvGate public API)")
 	return cmd
 }
 

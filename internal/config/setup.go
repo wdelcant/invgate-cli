@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -23,6 +24,7 @@ type SetupFlags struct {
 	ClientSecret string
 	Output       string
 	TokenURL     string
+	SpecURL      string
 }
 
 // SetupOptions configures how RunSetup operates.
@@ -35,8 +37,12 @@ type SetupOptions struct {
 	HTTPClient  *http.Client
 }
 
+// DefaultSpecURL is the default Swagger spec URL used during interactive setup.
+const DefaultSpecURL = "https://falabellacorp.is.cloud.invgate.net/public-api/swagger/v2/?format=openapi"
+
 // RunSetup guides the user through configuring invgate-cli.
-// In interactive mode it prompts for each value, validating URL format.
+// In interactive mode it downloads the spec, then prompts for base URL,
+// credentials, and output format.
 // In non-interactive mode it validates that required flags are set.
 // On completion it writes the config file and stores secrets in the
 // keychain, then tests the connection.
@@ -53,11 +59,26 @@ func RunSetup(opts SetupOptions) error {
 		cfg.Output = opts.Flags.Output
 	}
 
+	specURL := opts.Flags.SpecURL
+
 	if opts.Interactive {
 		scanner := bufio.NewScanner(opts.In)
 		scanner.Split(bufio.ScanLines)
 
-		var err error
+		// Step 0: Download the spec automatically.
+		if specURL == "" {
+			specURL = DefaultSpecURL
+		}
+		fmt.Fprintf(opts.Out, "Downloading API spec from %s ...\n", specURL)
+		specPath, err := downloadSpec(specURL)
+		if err != nil {
+			fmt.Fprintf(opts.Out, "warning: could not download spec: %v\n", err)
+			fmt.Fprintln(opts.Out, "You can specify a local spec file with --spec or set INVGATE_SPEC.")
+		} else {
+			cfg.SpecPath = specPath
+			fmt.Fprintf(opts.Out, "✓ Spec downloaded to %s\n\n", specPath)
+		}
+
 		cfg.BaseURL, err = promptURL(opts.Out, scanner, "Base URL", opts.Flags.BaseURL)
 		if err != nil {
 			return err
@@ -91,6 +112,15 @@ func RunSetup(opts SetupOptions) error {
 			return fmt.Errorf("--client-secret is required")
 		}
 		cfg.BaseURL = opts.Flags.BaseURL
+		// Download spec in non-interactive mode too.
+		if specURL != "" {
+			specPath, err := downloadSpec(specURL)
+			if err != nil {
+				fmt.Fprintf(opts.Out, "warning: could not download spec: %v\n", err)
+			} else {
+				cfg.SpecPath = specPath
+			}
+		}
 	}
 
 	// Persist config YAML (no secrets).
@@ -226,4 +256,40 @@ func testConnection(opts SetupOptions, baseURL string) error {
 		return fmt.Errorf("API call returned status %d", resp.StatusCode)
 	}
 	return nil
+}
+
+// downloadSpec fetches the spec from the given URL and saves it to the
+// default spec path (~/.config/invgate-cli/spec.json). The config
+// directory is created if needed. Returns the saved path on success.
+func downloadSpec(url string) (string, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", fmt.Errorf("spec download failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("spec download returned status %d", resp.StatusCode)
+	}
+
+	specPath, err := DefaultSpecPath()
+	if err != nil {
+		return "", err
+	}
+
+	dir := filepath.Dir(specPath)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return "", fmt.Errorf("could not create config directory: %w", err)
+	}
+
+	data, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20)) // 10MB max
+	if err != nil {
+		return "", fmt.Errorf("could not read spec body: %w", err)
+	}
+
+	if err := os.WriteFile(specPath, data, 0o600); err != nil {
+		return "", fmt.Errorf("could not write spec file: %w", err)
+	}
+
+	return specPath, nil
 }
