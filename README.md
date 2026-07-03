@@ -1,147 +1,164 @@
 # invgate-cli
 
-A runtime OpenAPI/Swagger CLI. `invgate-cli` parses a Swagger 2.0 or
-OpenAPI 3 spec at startup, builds a Cobra command tree from its
-operations, and routes each invocation through an OAuth2
-client-credentials executor. No code generation step — the spec *is*
-the source of truth at runtime.
-
-## Features
-
-- **Runtime spec loading** — Swagger 2.0 (auto-converted to OpenAPI 3
-  via `openapi2conv`) and OpenAPI 3.0, JSON or YAML.
-- **Dynamic command tree** — one Cobra subcommand per operation, grouped
-  by tag, with positional path args and typed query/body flags.
-- **OAuth2 client-credentials auth** — credential chain
-  (`flags → env → keychain`), token caching in the OS keychain,
-  auto-refresh within a 60-second safety window, and one retry on `401`.
-- **Output formats** — `json` (pretty in TTY, compact when piped),
-  `yaml`, `table`, and `csv`, with `--columns` selection.
-- **Static binaries** — `CGO_ENABLED=0`, cross-compiled for
-  linux/darwin/windows × amd64/arm64.
+A runtime OpenAPI/Swagger CLI. Parses any Swagger 2.0 or OpenAPI 3 spec at
+startup, builds a Cobra command tree from its operations, and routes each
+invocation through OAuth2 client-credentials auth. No code generation —
+the spec *is* the source of truth at runtime.
 
 ## Installation
 
+### macOS / Linux — Homebrew (recommended)
+
+```bash
+brew install wdelcant/tap/invgate-cli
+```
+
+### macOS / Linux — one-liner
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/wdelcant/invgate-cli/main/install.sh | bash
+```
+
+### Windows
+
+Download the latest `.zip` from
+[Releases](https://github.com/wdelcant/invgate-cli/releases/latest),
+extract, and add `invgate-cli.exe` to your `PATH`.
+
 ### Go install
 
-```sh
-go install github.com/invgate/invgate-cli/cmd/invgate-cli@latest
-```
-
-### Homebrew (once the tap is published)
-
-```sh
-brew install invgate/tap/invgate-cli
-```
-
-### From source
-
-```sh
-git clone https://github.com/invgate/invgate-cli
-cd invgate-cli
-go build -o invgate-cli ./cmd/invgate-cli
-```
-
-### Build with version info
-
-```sh
-VERSION=v0.1.0
-go build -ldflags "\
-  -X github.com/invgate/invgate-cli/internal/version.Version=$VERSION" \
-  -o invgate-cli ./cmd/invgate-cli
+```bash
+go install github.com/wdelcant/invgate-cli/cmd/invgate-cli@latest
 ```
 
 ## Quick start
 
-```sh
-# First-time configuration (interactive)
+```bash
+# Interactive setup — downloads the spec, prompts for credentials
 invgate-cli setup
 
-# Or non-interactive
+# Non-interactive (CI / scripting)
 invgate-cli setup \
-  --base-url https://your.invgate.com \
+  --base-url https://your-instance.invgate.net \
   --client-id "$INVGATE_CLIENT_ID" \
   --client-secret "$INVGATE_CLIENT_SECRET"
 
-# Discover available commands from the spec
-invgate-cli --spec ./invgate-swagger-v2.json --help
-
-# Run an operation
-invgate-cli --spec ./invgate-swagger-v2.json assets-lite list
-
-# Pipe-friendly output (compact JSON)
-invgate-cli assets-lite list | jq .
-
-# Other formats
-invgate-cli --output yaml assets-lite read 1
-invgate-cli --output table assets-lite list --columns id,name,status
-invgate-cli --output csv assets-lite list > assets.csv
+# Run commands
+invgate-cli asset-types list
+invgate-cli assets list --output table
+invgate-cli assets list --owner-email "user@corp.com" --output table
+invgate-cli people list --output table
+invgate-cli vendors list
 ```
+
+**`invgate-cli setup`** prompts for 3 things:
+
+1. Your InvGate instance URL (e.g. `https://your-company.is.cloud.invgate.net`)
+2. Client ID
+3. Client Secret
+
+Everything else — spec download, base URL, token URL, connection test — is automatic.
+
+## Features
+
+- **Runtime spec loading** — Swagger 2.0 (auto-converted via `openapi2conv`)
+  and OpenAPI 3.0, JSON or YAML.
+- **Dynamic command tree** — one Cobra subcommand per operation, grouped by
+  tag, with positional path args and typed query/body flags.
+- **OAuth2 client-credentials auth** — credential chain
+  (`flags → env → keychain`), 24h token caching in the OS keychain,
+  auto-refresh, and one retry on `401`.
+- **Output formats** — `json` (colored in TTY, compact when piped),
+  `yaml`, `table`, and `csv`, with `--columns` selection.
+- **Cross-platform binaries** — linux/darwin/windows × amd64/arm64, zero
+  dependencies.
 
 ## Configuration
 
-`invgate-cli` reads YAML config from the XDG config directory:
-
-- `$XDG_CONFIG_HOME/invgate-cli/config.yaml`, or
-- `~/.config/invgate-cli/config.yaml`
+Config is stored at `~/.config/invgate-cli/config.yaml`:
 
 ```yaml
-base_url: https://your.invgate.com
+base_url: https://your-instance.invgate.net/public-api/v2
 spec_path: ~/.config/invgate-cli/spec.json
-output: json       # json | yaml | table | csv
+output: json
 timeout: 30s
 ```
 
-**Secrets are NEVER written to the config file.** Client ID, client
-secret, and the cached access token live in the OS keychain
-(macOS Keychain, Windows Credential Manager, or Linux Secret Service)
-under the `invgate-cli` service.
+**Secrets are NEVER written to config.** Client ID, client secret, and
+access token live in the OS keychain (macOS Keychain, Windows Credential
+Manager, Linux Secret Service).
 
-### Environment variables
+## Environment variables
 
 | Variable | Purpose |
 |----------|---------|
-| `INVGATE_SPEC` | Path to the spec file |
+| `INVGATE_SPEC` | Path to spec file |
 | `INVGATE_BASE_URL` | API base URL override |
-| `INVGATE_OUTPUT` | Output format |
+| `INVGATE_OUTPUT` | Output format (`json`, `yaml`, `table`, `csv`) |
 | `INVGATE_TIMEOUT` | Request timeout (e.g. `30s`) |
 | `INVGATE_CLIENT_ID` | OAuth2 client ID |
 | `INVGATE_CLIENT_SECRET` | OAuth2 client secret |
 
 ## Authentication
 
-`invgate-cli` resolves credentials in priority order:
+Credentials are resolved in order:
 
 1. `--client-id` / `--client-secret` flags
-2. `INVGATE_CLIENT_ID` / `INVGATE_CLIENT_SECRET` environment variables
-3. OS keychain entries (`invgate-cli/client-id`, `invgate-cli/client-secret`)
+2. `INVGATE_CLIENT_ID` / `INVGATE_CLIENT_SECRET` env vars
+3. OS keychain (set by `invgate-cli setup`)
 
-The first non-empty source wins. The token endpoint comes from the spec's
-OAuth2 `clientCredentials` `tokenUrl`. Tokens are cached as
-`{"token":"...","expiry":"..."}` in the keychain and reused while
-`expiry - 60s > now`. A `401` response triggers a single token refresh
-and retry.
+First non-empty source wins. Tokens last 24h, cached in the keychain,
+and auto-refreshed transparently.
 
-```sh
-# Clear all stored credentials and tokens
-invgate-cli logout
+```bash
+invgate-cli logout   # clear all stored credentials and tokens
 ```
 
 ## Global flags
 
 | Flag | Description |
 |------|-------------|
-| `--spec` | Path to the OpenAPI/Swagger spec file |
+| `--spec` | Path to spec file |
 | `--base-url` | API base URL override |
-| `--output` | Output format: `json`, `yaml`, `table`, `csv` |
+| `--output` | Output format: `json` (default), `yaml`, `table`, `csv` |
 | `--timeout` | HTTP request timeout (e.g. `30s`) |
 | `--verbose` | Print request/response details on errors |
 | `--client-id` | OAuth2 client ID |
 | `--client-secret` | OAuth2 client secret |
 | `--compact` | Force compact JSON (no indentation/color) |
-| `--columns` | Restrict/reorder columns for `table`/`csv` output |
-| `--scope` | OAuth2 scopes (default: `write`) |
-| `--version`, `-v` | Print version, commit, and build date |
+| `--columns` | Restrict/reorder columns for table/csv output |
+| `--version`, `-v` | Print version and build info |
+
+## Examples
+
+```bash
+# List asset types
+invgate-cli asset-types list
+
+# List assets with filters
+invgate-cli assets list --owner-email "user@corp.com" --output table
+
+# Read a specific asset
+invgate-cli assets read 42
+
+# List people
+invgate-cli people list --output table
+
+# Search assets by keyword
+invgate-cli assets list --keyword "MacBook" --output table
+
+# Compact JSON for piping
+invgate-cli assets list | jq '.results[] | {id, name}'
+
+# CSV export
+invgate-cli assets list --output csv > assets.csv
+
+# YAML output
+invgate-cli vendors list --output yaml
+
+# Table with specific columns
+invgate-cli people list --output table --columns id,name,email
+```
 
 ## Exit codes
 
@@ -153,36 +170,17 @@ invgate-cli logout
 
 ## Development
 
-```sh
-# Run the full test suite (race detector + coverage)
-go test -race -timeout 120s -coverpkg=./internal/... ./internal/... ./tests/
+```bash
+git clone https://github.com/wdelcant/invgate-cli
+cd invgate-cli
 
-# Vet
-go vet ./...
+# Tests
+go test -race -timeout 120s ./...
 
-# Build a local binary
-go build -o ./invgate-cli ./cmd/invgate-cli
-```
-
-### Project layout
-
-```
-invgate-cli/
-├── cmd/invgate-cli/main.go        # entry-point shim
-├── internal/
-│   ├── cli/         cli.go        # root command assembly, RunOperation
-│   ├── spec/        loader.go     # Swagger2 → OAS3 loader
-│   ├── commands/    builder.go naming.go flags.go
-│   ├── auth/        manager.go resolver.go keyring.go oskeyring.go
-│   ├── client/      executor.go request.go
-│   ├── output/      formatter.go json.go yaml.go table.go csv.go
-│   ├── config/      config.go setup.go
-│   ├── errors/      errors.go    # AppError
-│   └── version/      version.go   # ldflags
-├── tests/           integration_test.go
-└── .goreleaser.yaml
+# Build
+go build -o invgate-cli ./cmd/invgate-cli
 ```
 
 ## License
 
-[MIT](LICENSE) — Copyright (c) 2026 InvGate
+[MIT](LICENSE)
