@@ -23,9 +23,17 @@ jobs:
         id: bump_type
         run: |
           MSG="${{ github.event.head_commit.message }}"
-          if echo "$MSG" | grep -qE '^fix[(:]'; then
-            echo "type=patch" >> $GITHUB_OUTPUT
-          elif echo "$MSG" | grep -qE '^feat[(:]'; then
+          BODY="${{ github.event.head_commit.message }}"
+          if echo "$MSG" | grep -qE '^fix[(!:)]|^fix$' || echo "$BODY" | grep -q 'BREAKING CHANGE'; then
+            # Check for breaking change marker in message body
+            if echo "$BODY" | grep -q 'BREAKING CHANGE'; then
+              echo "type=major" >> $GITHUB_OUTPUT
+            else
+              echo "type=patch" >> $GITHUB_OUTPUT
+            fi
+          elif echo "$MSG" | grep -qE '^feat![:]' || echo "$MSG" | grep -q '!:' ; then
+            echo "type=major" >> $GITHUB_OUTPUT
+          elif echo "$MSG" | grep -qE '^feat[(:]' ; then
             echo "type=minor" >> $GITHUB_OUTPUT
           else
             echo "type=patch" >> $GITHUB_OUTPUT
@@ -40,6 +48,7 @@ jobs:
         run: |
           IFS='.' read -r major minor patch <<< "${{ steps.current.outputs.version }}"
           case "${{ steps.bump_type.outputs.type }}" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
             minor) minor=$((minor + 1)); patch=0 ;;
             patch) patch=$((patch + 1)) ;;
           esac
