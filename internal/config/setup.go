@@ -89,11 +89,11 @@ func RunSetup(opts SetupOptions) error {
 		cfg.BaseURL = instanceURL + "/public-api/v2"
 
 		// Step 2: Credentials.
-		clientID, err := promptString(opts.Out, scanner, "Client ID", opts.Flags.ClientID)
+		clientID, err := promptSecret(opts.Out, opts.In, scanner, "Client ID")
 		if err != nil {
 			return err
 		}
-		clientSecret, err := promptSecret(opts.Out, opts.In, scanner, "Client Secret (hidden)")
+		clientSecret, err := promptSecret(opts.Out, opts.In, scanner, "Client Secret")
 		if err != nil {
 			return err
 		}
