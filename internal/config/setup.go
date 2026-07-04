@@ -14,6 +14,7 @@ import (
 	"github.com/wdelcant/invgate-cli/internal/auth"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
+	"golang.org/x/term"
 )
 
 // SetupFlags holds the non-interactive setup parameters.
@@ -92,7 +93,7 @@ func RunSetup(opts SetupOptions) error {
 		if err != nil {
 			return err
 		}
-		clientSecret, err := promptString(opts.Out, scanner, "Client Secret (no echo)", opts.Flags.ClientSecret)
+		clientSecret, err := promptSecret(opts.Out, opts.In, scanner, "Client Secret (hidden)")
 		if err != nil {
 			return err
 		}
@@ -176,7 +177,28 @@ func promptString(out io.Writer, scanner *bufio.Scanner, label, def string) (str
 	return def, nil
 }
 
-// promptURL prompts for a URL and re-prompts on invalid input.
+// promptSecret reads a line of input without echoing characters to the
+// terminal. Falls back to the shared scanner when stdin is not a terminal
+// (e.g. piped input in CI).
+func promptSecret(out io.Writer, in io.Reader, scanner *bufio.Scanner, label string) (string, error) {
+	fmt.Fprintf(out, "%s: ", label)
+
+	f, ok := in.(*os.File)
+	if !ok || !term.IsTerminal(int(f.Fd())) {
+		// Fall back to the shared scanner for non-TTY (CI, piped).
+		if scanner.Scan() {
+			return strings.TrimSpace(scanner.Text()), nil
+		}
+		return "", scanner.Err()
+	}
+
+	secret, err := term.ReadPassword(int(f.Fd()))
+	fmt.Fprintln(out) // newline after hidden input
+	if err != nil {
+		return "", fmt.Errorf("could not read secret: %w", err)
+	}
+	return strings.TrimSpace(string(secret)), nil
+}
 func promptURL(out io.Writer, scanner *bufio.Scanner, label, def string) (string, error) {
 	for {
 		v, err := promptString(out, scanner, label, def)
