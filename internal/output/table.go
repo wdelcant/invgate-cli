@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-
-	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/lipgloss/table"
 )
 
 // TableFormatter renders arrays and objects as ASCII tables using the
@@ -86,28 +83,55 @@ func inferRows(v any) (rows []map[string]string, headers []string, err error) {
 	return rows, headers, nil
 }
 
-// renderTable produces ASCII output using lipgloss/table. The table
-// is rendered with a normal border and a bold header row, matching the
-// design doc's chosen dependency.
+// renderTable produces a clean, borderless column-aligned table with a
+// dashed separator under the header row. No Unicode box-drawing characters
+// — works on every terminal, including narrow or limited ones.
 func renderTable(headers []string, rows []map[string]string) []byte {
-	headerStyle := lipgloss.NewStyle().Bold(true)
-	tbl := table.New().
-		Border(lipgloss.NormalBorder()).
-		StyleFunc(func(row, col int) lipgloss.Style {
-			if row == table.HeaderRow {
-				return headerStyle
-			}
-			return lipgloss.NewStyle()
-		}).
-		Headers(headers...)
-	for _, r := range rows {
-		row := make([]string, 0, len(headers))
-		for _, h := range headers {
-			row = append(row, r[h])
-		}
-		tbl.Row(row...)
+	// Calculate column widths (header or data, whichever is wider).
+	widths := make([]int, len(headers))
+	for i, h := range headers {
+		widths[i] = len(h)
 	}
-	return []byte(tbl.Render() + "\n")
+	for _, row := range rows {
+		for i, h := range headers {
+			if l := len(row[h]); l > widths[i] {
+				widths[i] = l
+			}
+		}
+	}
+
+	var sb strings.Builder
+
+	// Header row.
+	for i, h := range headers {
+		if i > 0 {
+			sb.WriteString("  ")
+		}
+		sb.WriteString(fmt.Sprintf("%-*s", widths[i], h))
+	}
+	sb.WriteByte('\n')
+
+	// Separator.
+	for i, w := range widths {
+		if i > 0 {
+			sb.WriteString("  ")
+		}
+		sb.WriteString(strings.Repeat("─", w))
+	}
+	sb.WriteByte('\n')
+
+	// Data rows.
+	for _, row := range rows {
+		for i, h := range headers {
+			if i > 0 {
+				sb.WriteString("  ")
+			}
+			sb.WriteString(fmt.Sprintf("%-*s", widths[i], row[h]))
+		}
+		sb.WriteByte('\n')
+	}
+
+	return []byte(sb.String())
 }
 
 // projectRows keeps only the requested columns in the requested order.
