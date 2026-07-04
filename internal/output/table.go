@@ -68,6 +68,26 @@ func inferRows(v any) (rows []map[string]string, headers []string, err error) {
 			rows = append(rows, row)
 		}
 	case map[string]any:
+		// If the response is a paginated wrapper {count, next, previous, results},
+		// expand the results array so each item becomes a row.
+		if arr, ok := t["results"].([]any); ok && len(arr) > 0 {
+			if first, ok := arr[0].(map[string]any); ok {
+				headers = sortedKeys(first)
+			}
+			for _, item := range arr {
+				m, ok := item.(map[string]any)
+				if !ok {
+					rows = append(rows, map[string]string{"value": stringify(item)})
+					continue
+				}
+				row := make(map[string]string)
+				for k, val := range m {
+					row[k] = stringify(val)
+				}
+				rows = append(rows, row)
+			}
+			return rows, headers, nil
+		}
 		headers = sortedKeys(t)
 		row := make(map[string]string)
 		for k, val := range t {
