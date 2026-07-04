@@ -60,4 +60,5 @@ func init() {
 	Register(&YAMLFormatter{})
 	Register(&TableFormatter{})
 	Register(&CSVFormatter{})
+	Register(&RecordFormatter{})
 }
