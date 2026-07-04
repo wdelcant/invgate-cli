@@ -8,6 +8,9 @@ on:
       - 'README.md'
       - '.github/**'
 
+permissions:
+  contents: write
+
 jobs:
   bump:
     runs-on: ubuntu-latest
