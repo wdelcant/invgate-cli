@@ -42,12 +42,36 @@ func (f *RecordFormatter) Format(data any, cfg FormatConfig) ([]byte, error) {
 		sb.WriteString(fmt.Sprintf("─── Record %d ", i+1))
 		sb.WriteString(strings.Repeat("─", maxKey))
 		sb.WriteByte('\n')
-		keys := sortedKeysStr(item)
-		for _, k := range keys {
-			sb.WriteString(fmt.Sprintf("%-*s  %s\n", maxKey, k, stringify(item[k])))
-		}
+		writeRecord(&sb, item, "", maxKey)
 	}
 	return []byte(sb.String()), nil
+}
+
+// writeRecord recursively writes key-value pairs with proper indentation.
+// Nested maps are expanded inline; arrays show each item indented.
+func writeRecord(sb *strings.Builder, m map[string]any, indent string, align int) {
+	keys := sortedKeysStr(m)
+	for _, k := range keys {
+		v := m[k]
+		switch val := v.(type) {
+		case map[string]any:
+			fmt.Fprintf(sb, "%s%-*s\n", indent, align-len(indent)+2, k+":")
+			writeRecord(sb, val, indent+"  ", align)
+		case []any:
+			fmt.Fprintf(sb, "%s%-*s\n", indent, align-len(indent)+2, k+":")
+			for _, item := range val {
+				if im, ok := item.(map[string]any); ok {
+					writeRecord(sb, im, indent+"  - ", align)
+				} else {
+					fmt.Fprintf(sb, "%s  - %s\n", indent, stringify(item))
+				}
+			}
+		case nil:
+			fmt.Fprintf(sb, "%s%-*s  -\n", indent, align-len(indent)+2, k+":")
+		default:
+			fmt.Fprintf(sb, "%s%-*s  %s\n", indent, align-len(indent)+2, k+":", stringify(v))
+		}
+	}
 }
 
 // flattenRecords extracts individual records from the data:
