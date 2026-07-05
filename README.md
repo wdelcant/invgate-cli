@@ -19,7 +19,14 @@ brew install wdelcant/tap/invgate-cli
 curl -fsSL https://raw.githubusercontent.com/wdelcant/invgate-cli/main/install.sh | bash
 ```
 
-### Windows
+### Windows — Scoop (recommended)
+
+```powershell
+scoop bucket add invgate https://github.com/wdelcant/scoop-bucket
+scoop install invgate-cli
+```
+
+### Windows — manual
 
 Download the latest `.zip` from
 [Releases](https://github.com/wdelcant/invgate-cli/releases/latest),

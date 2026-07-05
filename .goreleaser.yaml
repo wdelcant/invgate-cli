@@ -45,6 +45,15 @@ brews:
     test: |
       system "#{bin}/invgate-cli", "--version"
 
+scoops:
+  - repository:
+      owner: wdelcant
+      name: scoop-bucket
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    homepage: https://github.com/wdelcant/invgate-cli
+    description: "Runtime OpenAPI/Swagger CLI — works with any Swagger/OpenAPI spec"
+    license: MIT
+
 release:
   github:
     owner: wdelcant
