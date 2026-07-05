@@ -7,8 +7,10 @@ const https = require("https");
 
 const BIN = "invgate-cli" + (platform() === "win32" ? ".exe" : "");
 const RELEASES = "https://github.com/wdelcant/invgate-cli/releases";
+const { writeFileSync, readFileSync } = require("fs");
 const DIR = join(homedir(), ".invgate", "bin");
 const BIN_PATH = join(DIR, BIN);
+const VER_PATH = join(DIR, ".version");
 
 async function getLatestVersion() {
   return new Promise((resolve, reject) => {
@@ -48,20 +50,23 @@ async function download(url, dest) {
 }
 
 async function main() {
-  if (existsSync(BIN_PATH)) {
+  const latestVer = await getLatestVersion();
+  let currentVer = "";
+  try { currentVer = readFileSync(VER_PATH, "utf8").trim(); } catch {}
+
+  if (existsSync(BIN_PATH) && currentVer === latestVer) {
     try {
       execSync(`"${BIN_PATH}"`, { stdio: "inherit" });
       return;
     } catch {}
   }
 
-  const version = await getLatestVersion();
-  const asset = getAssetName(version);
-  const url = `${RELEASES}/download/v${version}/${asset}`;
+  const asset = getAssetName(latestVer);
+  const url = `${RELEASES}/download/v${latestVer}/${asset}`;
   const tmp = join(DIR, asset);
 
   mkdirSync(DIR, { recursive: true });
-  console.error(`Downloading invgate-cli v${VERSION} for ${platform()}/${process.arch}...`);
+  console.error(`Downloading invgate-cli v${latestVer} for ${platform()}/${process.arch}...`);
   await download(url, tmp);
 
   if (asset.endsWith(".zip")) {
@@ -71,6 +76,7 @@ async function main() {
   }
 
   try { require("fs").unlinkSync(tmp); } catch {}
+  writeFileSync(VER_PATH, latestVer);
 
   execSync(`"${BIN_PATH}"`, { stdio: "inherit" });
 }
