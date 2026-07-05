@@ -137,14 +137,20 @@ func RunSetup(opts SetupOptions) error {
 		return fmt.Errorf("could not save config: %w", err)
 	}
 
-	// Store secrets in keychain if available.
+	// Store secrets in keychain (best-effort). Falls back to file
+	// when the OS keychain is unavailable (headless Linux, Docker, CI).
 	if opts.Keyring != nil {
 		if err := opts.Keyring.Set(auth.ServiceName, auth.KeyClientID, opts.Flags.ClientID); err != nil {
-			return fmt.Errorf("could not store client-id in keychain: %w", err)
+			fmt.Fprintf(opts.Out, "warning: could not store client-id in keychain, using file fallback\n")
 		}
 		if err := opts.Keyring.Set(auth.ServiceName, auth.KeyClientSecret, opts.Flags.ClientSecret); err != nil {
-			return fmt.Errorf("could not store client-secret in keychain: %w", err)
+			fmt.Fprintf(opts.Out, "warning: could not store client-secret in keychain, using file fallback\n")
 		}
+	}
+	// Always write file fallback as backup.
+	resolver := auth.NewCredentialResolver(opts.Keyring)
+	if err := resolver.StoreCredentials(opts.Flags.ClientID, opts.Flags.ClientSecret); err != nil {
+		fmt.Fprintf(opts.Out, "warning: could not store credentials: %v\n", err)
 	}
 
 	// Optional connection test. Non-fatal: warn on failure.

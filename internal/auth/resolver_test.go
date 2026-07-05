@@ -66,6 +66,8 @@ func TestResolve_NoCreds(t *testing.T) {
 	m := NewMockKeyring()
 	os.Unsetenv("INVGATE_CLIENT_ID")
 	os.Unsetenv("INVGATE_CLIENT_SECRET")
+	// Also ensure no file-based credentials from previous tests.
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	r := NewCredentialResolver(m)
 	_, _, err := r.Resolve()
 	if err == nil {
@@ -131,9 +133,10 @@ func TestStoredCredentialsPresent_OnlyClientSecret(t *testing.T) {
 
 func TestStoreCredentials_NilKeyring(t *testing.T) {
 	r := &CredentialResolver{Keyring: nil}
+	// Nil keyring now falls back to file storage, so it should succeed.
 	err := r.StoreCredentials("id", "sec")
-	if err == nil {
-		t.Fatal("StoreCredentials with nil keyring should error")
+	if err != nil {
+		t.Fatalf("StoreCredentials with nil keyring should write to file: %v", err)
 	}
 }
 
@@ -141,9 +144,10 @@ func TestStoreCredentials_ClientIDSetFails(t *testing.T) {
 	m := NewMockKeyring()
 	m.Unavailable = true
 	r := NewCredentialResolver(m)
+	// Keychain unavailable now falls back to file storage.
 	err := r.StoreCredentials("id", "sec")
-	if err == nil {
-		t.Fatal("StoreCredentials should error when Set fails")
+	if err != nil {
+		t.Fatalf("StoreCredentials should fall back to file: %v", err)
 	}
 }
 
@@ -151,8 +155,9 @@ func TestStoreCredentials_ClientSecretSetFails(t *testing.T) {
 	m := NewMockKeyring()
 	kr := keyringFailOn{inner: m, failSet: map[string]error{KeyClientSecret: errKeyringFail}}
 	r := NewCredentialResolver(kr)
+	// Client-secret Set fails → falls back to file storage.
 	err := r.StoreCredentials("id", "sec")
-	if err == nil {
-		t.Fatal("StoreCredentials should error when client-secret Set fails")
+	if err != nil {
+		t.Fatalf("StoreCredentials should fall back to file: %v", err)
 	}
 }

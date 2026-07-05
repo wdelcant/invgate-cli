@@ -1,11 +1,15 @@
 package auth
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/wdelcant/invgate-cli/internal/errors"
 )
+
+const credFileName = "credentials.json"
 
 // CredentialResolver reads credentials in priority order:
 // 1. Explicit flag values (set via SetClientID/SetClientSecret)
@@ -23,8 +27,8 @@ func NewCredentialResolver(kr Keyring) *CredentialResolver {
 }
 
 // Resolve returns the best client ID and secret following the
-// credential chain. If none are found, returns an AppError guiding
-// the user to run setup.
+// credential chain: flags → env → keychain → fallback file.
+// If none are found, returns an AppError guiding the user to run setup.
 func (r *CredentialResolver) Resolve() (clientID, clientSecret string, err error) {
 	clientID = r.firstNonEmpty(
 		r.ClientIDFlag,
@@ -42,6 +46,17 @@ func (r *CredentialResolver) Resolve() (clientID, clientSecret string, err error
 	if clientSecret == "" && r.Keyring != nil {
 		if v, e := r.Keyring.Get(ServiceName, KeyClientSecret); e == nil {
 			clientSecret = v
+		}
+	}
+	// Fallback to file when the OS keychain is unavailable (e.g. headless Linux).
+	if clientID == "" || clientSecret == "" {
+		if fc, ok := readCredFile(); ok {
+			if clientID == "" {
+				clientID = fc.ClientID
+			}
+			if clientSecret == "" {
+				clientSecret = fc.ClientSecret
+			}
 		}
 	}
 	if clientID == "" || clientSecret == "" {
@@ -74,16 +89,67 @@ func (r *CredentialResolver) StoredCredentialsPresent() bool {
 }
 
 // StoreCredentials writes client ID and secret to the keychain.
-// Flags/env-only callers use this to persist after setup.
+// If the keychain is unavailable, falls back to a restricted-permission
+// file in the config directory.
 func (r *CredentialResolver) StoreCredentials(clientID, clientSecret string) error {
 	if r.Keyring == nil {
-		return fmt.Errorf("keyring not available")
+		return writeCredFile(clientID, clientSecret)
 	}
 	if err := r.Keyring.Set(ServiceName, KeyClientID, clientID); err != nil {
-		return fmt.Errorf("could not store client-id: %w", err)
+		// Keychain unavailable — fall back to file.
+		return writeCredFile(clientID, clientSecret)
 	}
 	if err := r.Keyring.Set(ServiceName, KeyClientSecret, clientSecret); err != nil {
-		return fmt.Errorf("could not store client-secret: %w", err)
+		return writeCredFile(clientID, clientSecret)
 	}
 	return nil
+}
+
+// credFileEntry is the JSON persisted to disk as a keychain fallback.
+type credFileEntry struct {
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+}
+
+func credFilePath() (string, error) {
+	configDir := os.Getenv("XDG_CONFIG_HOME")
+	if configDir == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return "", err
+		}
+		configDir = filepath.Join(home, ".config")
+	}
+	return filepath.Join(configDir, "invgate-cli", credFileName), nil
+}
+
+func readCredFile() (credFileEntry, bool) {
+	path, err := credFilePath()
+	if err != nil {
+		return credFileEntry{}, false
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return credFileEntry{}, false
+	}
+	var entry credFileEntry
+	if err := json.Unmarshal(data, &entry); err != nil {
+		return credFileEntry{}, false
+	}
+	return entry, entry.ClientID != "" && entry.ClientSecret != ""
+}
+
+func writeCredFile(clientID, clientSecret string) error {
+	path, err := credFilePath()
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return fmt.Errorf("could not create config dir: %w", err)
+	}
+	data, err := json.Marshal(credFileEntry{ClientID: clientID, ClientSecret: clientSecret})
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0o600)
 }

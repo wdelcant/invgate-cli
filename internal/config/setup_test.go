@@ -467,8 +467,7 @@ func TestPromptURL_ScannerError(t *testing.T) {
 }
 
 // TestRunSetup_Interactive_KeyringSetFails makes the keyring fail on
-// the very first Set (client-id), so RunSetup returns a wrapped keychain
-// error before reaching the connection test.
+// Set but setup now falls back to file storage, so it should succeed.
 func TestRunSetup_Interactive_KeyringSetFails(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
@@ -483,11 +482,8 @@ func TestRunSetup_Interactive_KeyringSetFails(t *testing.T) {
 		Out:         &out,
 		Keyring:     m,
 	})
-	if err == nil {
-		t.Fatal("RunSetup should fail when keyring.Set fails")
-	}
-	if !strings.Contains(err.Error(), "client-id in keychain") {
-		t.Errorf("error = %v, want 'client-id in keychain'", err)
+	if err != nil {
+		t.Fatalf("RunSetup should succeed with file fallback: %v", err)
 	}
 }
 
@@ -506,11 +502,9 @@ func TestRunSetup_Interactive_KeyringSetSecretFails(t *testing.T) {
 		Out:         &out,
 		Keyring:     &failOnSecondSetKeyring{},
 	})
-	if err == nil {
-		t.Fatal("RunSetup should fail when the second keyring.Set fails")
-	}
-	if !strings.Contains(err.Error(), "client-secret in keychain") {
-		t.Errorf("error = %v, want 'client-secret in keychain'", err)
+	// Setup now falls back to file storage when keychain fails.
+	if err != nil {
+		t.Fatalf("RunSetup should succeed with file fallback: %v", err)
 	}
 }
 
