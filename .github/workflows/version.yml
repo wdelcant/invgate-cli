@@ -68,3 +68,9 @@ jobs:
           git tag "v${{ steps.semver.outputs.new_version }}"
           git push
           git push --tags
+
+      - name: Trigger release
+        run: |
+          gh workflow run release.yml --ref "v${{ steps.semver.outputs.new_version }}" --repo ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
