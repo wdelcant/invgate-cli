@@ -367,7 +367,8 @@ func (c *CLI) runOperation(cmd *cobra.Command, method, path string, op *openapi3
 }
 
 // renderOutput parses the JSON response body and renders it through the
-// selected formatter.
+// selected formatter. Adds pagination summary when the response is a
+// paginated wrapper {count, next, previous, results}.
 func (c *CLI) renderOutput(body []byte) error {
 	format := c.OutputFmt
 	if format == "" {
@@ -405,6 +406,24 @@ func (c *CLI) renderOutput(body []byte) error {
 	// Ensure a trailing newline for text formats when missing.
 	if len(out) > 0 && out[len(out)-1] != '\n' {
 		fmt.Fprintln(c.Out)
+	}
+	// Pagination summary for DRF-style wrappers.
+	if wrapper, ok := data.(map[string]any); ok {
+		if countRaw, hasCount := wrapper["count"]; hasCount {
+			if count, ok := countRaw.(float64); ok {
+				results := extractResults(wrapper)
+				fmt.Fprintf(c.Out, "(showing %d of %.0f total — use --page N for next pages)\n", len(results), count)
+			}
+		}
+	}
+	return nil
+}
+
+func extractResults(m map[string]any) []any {
+	if r, ok := m["results"]; ok {
+		if arr, ok := r.([]any); ok {
+			return arr
+		}
 	}
 	return nil
 }
