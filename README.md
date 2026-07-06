@@ -13,6 +13,12 @@ the spec *is* the source of truth at runtime.
 brew install wdelcant/tap/invgate-cli
 ```
 
+### Any OS — npm
+
+```bash
+npm install -g invgate-cli
+```
+
 ### macOS / Linux — one-liner
 
 ```bash
