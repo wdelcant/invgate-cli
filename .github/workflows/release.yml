@@ -52,7 +52,9 @@ jobs:
         run: |
           VERSION="${GITHUB_REF#refs/tags/v}"
           cd npm
-          node -e "const p=require('./package.json'); if(p.version!=='$VERSION') process.exit(1)" || npm version "$VERSION" --no-git-tag-version
+          if [ "$(node -e "console.log(require('./package.json').version)")" != "$VERSION" ]; then
+            npm version "$VERSION" --no-git-tag-version
+          fi
           npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
