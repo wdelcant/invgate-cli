@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 const { execSync } = require("child_process");
-const { existsSync, mkdirSync, createWriteStream, writeFileSync, readFileSync } = require("fs");
+const { existsSync, mkdirSync, createWriteStream, writeFileSync, readFileSync, unlinkSync } = require("fs");
 const { join } = require("path");
 const { homedir, platform } = require("os");
 const https = require("https");
@@ -42,7 +42,7 @@ function download(url, dest) {
       }
       if (res.statusCode !== 200) {
         file.close();
-        try { require("fs").unlinkSync(dest); } catch {}
+        try { unlinkSync(dest); } catch {}
         return reject(new Error(`HTTP ${res.statusCode} from ${url}`));
       }
       res.pipe(file);
@@ -69,11 +69,12 @@ async function main() {
   await download(url, tmp);
 
   if (ext === "zip") {
-    execSync(`powershell -Command "Expand-Archive -Path '${tmp}' -DestinationPath '${DIR}' -Force"`, { stdio: "ignore" });
+    // Use built-in tar on Windows 10+ (no PowerShell required).
+    execSync(`tar -xf "${tmp}" -C "${DIR}"`, { stdio: "pipe" });
   } else {
     execSync(`tar -xzf "${tmp}" -C "${DIR}"`, { stdio: "ignore" });
   }
-  try { require("fs").unlinkSync(tmp); } catch {}
+  try { unlinkSync(tmp); } catch {}
   writeFileSync(VER_PATH, ver);
   execSync(`"${BIN_PATH}"`, { stdio: "inherit" });
 }
