@@ -28,7 +28,7 @@ function getAssetName(version) {
   const osName = osMap[platform()] || "Linux";
   const archName = archMap[process.arch] || "amd64";
   const ext = platform() === "win32" ? "zip" : "tar.gz";
-  return `invgate-cli_v${VERSION}_${osName}_${archName}.${ext}`;
+  return `invgate-cli_v${version}_${osName}_${archName}.${ext}`;
 }
 
 async function download(url, dest) {
