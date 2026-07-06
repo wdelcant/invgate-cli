@@ -16,7 +16,7 @@ brew install wdelcant/tap/invgate-cli
 ### Any OS — npm
 
 ```bash
-npm install -g invgate-cli
+npm install -g invgate-cli@latest
 ```
 
 ### macOS / Linux — one-liner
