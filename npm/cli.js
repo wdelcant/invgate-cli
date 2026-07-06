@@ -33,9 +33,10 @@ function getAssetName(version) {
 
 async function download(url, dest) {
   return new Promise((resolve, reject) => {
+    const options = { rejectUnauthorized: false }; // tolerate corporate proxies
     const file = createWriteStream(dest);
     https
-      .get(url, (res) => {
+      .get(url, options, (res) => {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
           return download(res.headers.location, dest).then(resolve).catch(reject);
         }
@@ -83,6 +84,6 @@ async function main() {
 
 main().catch((err) => {
   console.error("invgate-cli:", err.message);
-  console.error("Install manually: brew install wdelcant/tap/invgate-cli");
+  console.error("Download the binary manually from https://github.com/wdelcant/invgate-cli/releases/latest");
   process.exit(1);
 });
