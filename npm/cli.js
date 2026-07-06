@@ -52,11 +52,12 @@ function download(url, dest) {
 }
 
 async function main() {
+  const args = process.argv.slice(2).map(a => `"${a}"`).join(" ");
   const ver = await getLatestVersion();
   const cached = existsSync(VER_PATH) ? readFileSync(VER_PATH, "utf8").trim() : "";
 
   if (existsSync(BIN_PATH) && cached === ver) {
-    try { execSync(`"${BIN_PATH}"`, { stdio: "inherit" }); return; } catch {}
+    try { execSync(`"${BIN_PATH}" ${args}`, { stdio: "inherit" }); return; } catch {}
   }
 
   const { name: asset, ext } = getAsset(ver);
@@ -76,7 +77,7 @@ async function main() {
   }
   try { unlinkSync(tmp); } catch {}
   writeFileSync(VER_PATH, ver);
-  execSync(`"${BIN_PATH}"`, { stdio: "inherit" });
+  execSync(`"${BIN_PATH}" ${args}`, { stdio: "inherit" });
 }
 
 main().catch((e) => {

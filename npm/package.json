@@ -1,6 +1,6 @@
 {
   "name": "invgate-cli",
-  "version": "0.4.5",
+  "version": "0.4.6",
   "description": "Runtime OpenAPI/Swagger CLI for InvGate Asset Management",
   "license": "MIT",
   "repository": {
