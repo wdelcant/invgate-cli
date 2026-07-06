@@ -160,7 +160,7 @@ func TestCSVFormatter(t *testing.T) {
 }
 
 func TestRegistry_Lookup(t *testing.T) {
-	for _, name := range []string{"json", "yaml", "table", "csv"} {
+	for _, name := range []string{"json", "yaml", "table", "csv", "record"} {
 		f, err := Get(name)
 		if err != nil {
 			t.Errorf("Get(%q) error: %v", name, err)

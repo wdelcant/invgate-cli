@@ -107,7 +107,7 @@ Manager, Linux Secret Service).
 |----------|---------|
 | `INVGATE_SPEC` | Path to spec file |
 | `INVGATE_BASE_URL` | API base URL override |
-| `INVGATE_OUTPUT` | Output format (`json`, `yaml`, `table`, `csv`) |
+| `INVGATE_OUTPUT` | Output format (`json`, `yaml`, `table`, `csv`, `record`) |
 | `INVGATE_TIMEOUT` | Request timeout (e.g. `30s`) |
 | `INVGATE_CLIENT_ID` | OAuth2 client ID |
 | `INVGATE_CLIENT_SECRET` | OAuth2 client secret |
@@ -133,7 +133,7 @@ invgate-cli logout   # clear all stored credentials and tokens
 |------|-------------|
 | `--spec` | Path to spec file |
 | `--base-url` | API base URL override |
-| `--output` | Output format: `json` (default), `yaml`, `table`, `csv` |
+| `--output` | Output format: `json` (default), `yaml`, `table`, `csv`, `record` |
 | `--timeout` | HTTP request timeout (e.g. `30s`) |
 | `--verbose` | Print request/response details on errors |
 | `--client-id` | OAuth2 client ID |

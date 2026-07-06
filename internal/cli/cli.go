@@ -112,7 +112,7 @@ func (c *CLI) buildRoot() {
 	// Global persistent flags.
 	root.PersistentFlags().String("spec", "", "Path to the OpenAPI/Swagger spec file")
 	root.PersistentFlags().String("base-url", "", "API base URL override")
-	root.PersistentFlags().String("output", "", "Output format: json, yaml, table, csv")
+	root.PersistentFlags().String("output", "", "Output format: json, yaml, table, csv, record")
 	root.PersistentFlags().Duration("timeout", 0, "HTTP request timeout (e.g. 30s)")
 	root.PersistentFlags().Bool("verbose", false, "Verbose error output (request/response details)")
 	root.PersistentFlags().String("client-id", "", "OAuth2 client ID (overrides env/keychain)")
