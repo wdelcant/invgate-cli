@@ -13,11 +13,21 @@ const BIN_PATH = join(DIR, BIN);
 const VER_PATH = join(DIR, ".version");
 
 async function getLatestVersion() {
-  return new Promise((resolve, reject) => {
-    https.get(`${RELEASES}/latest`, (res) => {
-      const location = res.headers.location || "";
-      const tag = location.split("/").pop();
-      resolve(tag.startsWith("v") ? tag.slice(1) : tag);
+  const url = "https://api.github.com/repos/wdelcant/invgate-cli/releases/latest";
+  return new Promise((resolve) => {
+    const headers = { "User-Agent": "invgate-cli-npm", "Accept": "application/vnd.github+json" };
+    https.get(url, { headers, rejectUnauthorized: false }, (res) => {
+      let body = "";
+      res.on("data", (chunk) => { body += chunk; });
+      res.on("end", () => {
+        try {
+          const data = JSON.parse(body);
+          const tag = (data.tag_name || "").replace(/^v/, "");
+          resolve(tag || require("./package.json").version);
+        } catch {
+          resolve(require("./package.json").version);
+        }
+      });
     }).on("error", () => resolve(require("./package.json").version));
   });
 }
