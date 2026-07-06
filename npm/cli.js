@@ -43,7 +43,10 @@ function getAssetName(version) {
 
 async function download(url, dest) {
   return new Promise((resolve, reject) => {
-    const options = { rejectUnauthorized: false }; // tolerate corporate proxies
+    const options = {
+      rejectUnauthorized: false,
+      headers: { "User-Agent": "invgate-cli-npm" }
+    };
     const file = createWriteStream(dest);
     https
       .get(url, options, (res) => {
