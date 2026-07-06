@@ -29,7 +29,7 @@ function getAsset(ver) {
   const os = { darwin: "macOS", linux: "Linux", win32: "Windows" }[platform()] || "Linux";
   const arch = { x64: "amd64", arm64: "arm64" }[process.arch] || "amd64";
   const ext = platform() === "win32" ? "zip" : "tar.gz";
-  return { name: `invgate-cli_v${ver}_${os}_${arch}.${ext}`, ext };
+  return { name: `invgate-cli_${ver}_${os}_${arch}.${ext}`, ext };
 }
 
 function download(url, dest) {
